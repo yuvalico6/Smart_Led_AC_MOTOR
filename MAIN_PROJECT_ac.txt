@@ -1,0 +1,129 @@
+/***************************************************
+                  MAIN Project - ac
+
+ ****************************************************/
+#include <ESP8266WiFi.h>
+//#include <WiFi.h>
+#include "Adafruit_MQTT.h"
+#include "Adafruit_MQTT_Client.h"
+#include <string.h>
+//#include "Servo.h"
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+
+/************************* WiFi Access Point *********************************/
+
+#define WLAN_SSID       "Yuvalico6"
+#define WLAN_PASS       "yuvel674"
+
+/************************* Adafruit.io Setup *********************************/
+
+#define AIO_SERVER      "io.adafruit.com"
+#define AIO_SERVERPORT  1883                   // use 8883 for SSL
+#define AIO_USERNAME    "yuvalico6"
+#define AIO_KEY         "aio_Swyj134ov5yGaeIBEkKbS2cy6OSf"
+
+/************************* Global State *********************************/
+
+// Create an ESP8266 WiFiClient class to connect to the MQTT server.
+WiFiClient client;
+// or... use WiFiFlientSecure for SSL
+//WiFiClientSecure client;
+
+// Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
+Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
+
+/****************************** Feeds ***************************************/
+
+//Adafruit_MQTT_Subscribe MOTOR = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/middle-project.motor");
+Adafruit_MQTT_Subscribe AC_SUB = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/middle-project.ac");
+Adafruit_MQTT_Publish AC_PUB = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/middle-project.ac");
+/*************************** Sketch Code ************************************/
+
+void MQTT_connect();
+
+
+//AC
+const uint16_t kIrLed = 4;
+IRsend irsend(kIrLed);
+
+uint16_t ON[199] = {4442, 4346,  564, 1618,  562, 538,  560, 1642,  544, 1636,  542, 552,  542, 552,  540, 1640,  542, 554,  548, 542,  542, 1640,  544, 550,  544, 548,  544, 1638,  546, 1636,  544, 550,  542, 1644,  550, 542,  540, 1644,  542, 550,  544, 1640,  544, 1638,  542, 1638,  544, 1638,  540, 1642,  544, 1634,  544, 550,  544, 1640,  544, 550,  542, 550,  544, 548,  544, 544,  552, 552,  556, 532,  546, 544,  550, 550,  546, 1636,  546, 548,  544, 548,  544, 550,  544, 548,  562, 1622,  542, 1638,  544, 1636,  542, 552,  542, 1642,  542, 1640,  542, 1638,  540, 1640,  550, 5188,  4462, 4368,  542, 1638,  540, 540,  558, 1642,  542, 1638,  542, 552,  542, 552,  540, 1640,  544, 552,  546, 544,  546, 1636,  544, 550,  544, 548,  544, 1638,  544, 1636,  542, 550,  544, 1642,  552, 540,  544, 1642,  540, 552,  544, 1640,  542, 1638,  542, 1638,  544, 1638,  544, 1638,  544, 1634,  542, 552,  542, 1642,  542, 552,  544, 548,  540, 530,  568, 548,  544, 552,  556, 534,  544, 536,  554, 508,  586, 1642,  542, 552,  542, 552,  542, 528,  568, 550,  562, 1622,  540, 1640,  542, 1640,  544, 550,  542, 1644,  540, 1642,  540, 1640,  542, 1642,  540};  // COOLIX B25F10
+
+
+uint16_t OFF[199] = {4382, 4374,  562, 1644,  542, 528,  562, 1648,  540, 1640,  540, 550,  546, 550,  542, 1640,  542, 530,  580, 514,  562, 1640,  542, 528,  566, 552,  542, 1640,  542, 1638,  540, 552,  542, 1646,  552, 520,  562, 1642,  540, 1642,  538, 1640,  538, 1642,  540, 554,  540, 1644,  542, 1640,  552, 1626,  538, 556,  542, 552,  540, 554,  542, 550,  540, 1642,  544, 534,  558, 552,  558, 1622,  542, 1640,  544, 1638,  540, 552,  544, 550,  542, 530,  564, 526,  564, 530,  588, 488,  582, 532,  564, 538,  554, 1642,  540, 1642,  542, 1640,  540, 1642,  540, 1638,  550, 5240,  4422, 4318,  584, 1646,  538, 556,  538, 1640,  552, 1638,  542, 530,  562, 532,  558, 1644,  538, 556,  558, 514,  558, 1644,  542, 530,  558, 534,  556, 1648,  542, 1640,  538, 552,  542, 1604,  596, 514,  564, 1626,  560, 1642,  540, 1640,  538, 1624,  558, 550,  542, 1646,  540, 1624,  574, 1624,  542, 552,  538, 532,  562, 556,  538, 556,  538, 1644,  542, 526,  566, 552,  566, 1618,  542, 1638,  542, 1622,  556, 532,  564, 552,  538, 532,  560, 534,  560, 558,  562, 530,  538, 540,  558, 528,  564, 1638,  544, 1640,  542, 1618,  566, 1608,  572, 1642,  540};  // COOLIX B27BE0
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println(F("Starting..."));
+  delay(1000);
+
+  // Connect to WiFi access point.
+  Serial.println(); Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(WLAN_SSID);
+
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  Serial.println("WiFi connected");
+  Serial.println("IP address: "); Serial.println(WiFi.localIP());
+  Serial.println();
+
+  // SETUP ALL THE SUBSRCIPTIONS HERE
+  mqtt.subscribe(& AC_SUB);
+
+  irsend.begin();
+}
+
+void loop() {
+
+  // We must keep this for now
+  MQTT_connect();
+
+  /************* Subscribes ***********/
+  Adafruit_MQTT_Subscribe *subscription;
+  while ((subscription = mqtt.readSubscription(5000))) {
+
+    /*** AC - onoff ***/
+    if (subscription == &AC_SUB) {
+      Serial.print(F("\nAC Got: "));
+      Serial.println((char *)AC_SUB.lastread);
+      if (!strcmp((char*)AC_SUB.lastread, "OFF")) {
+        irsend.sendRaw(OFF, 199, 38);  // Send a raw data capture at 38kHz.
+        delay(15000); 
+      }
+    }
+  }   
+}
+
+// Function to connect and reconnect as necessary to the MQTT server.
+// Should be called in the loop function and it will take care if connecting.
+void MQTT_connect() {
+  int8_t ret;
+
+  // Stop if already connected.
+  if (mqtt.connected()) {
+    return;
+  }
+
+  Serial.print("Connecting to MQTT... ");
+
+  uint8_t retries = 3;
+  while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
+    Serial.println(mqtt.connectErrorString(ret));
+    Serial.println("Retrying MQTT connection in 5 seconds...");
+    mqtt.disconnect();
+    delay(5000);  // wait 5 seconds
+    retries--;
+    if (retries == 0) {
+      // basically die and wait for WDT to reset me
+      while (1);
+    }
+  }
+  Serial.println("MQTT Connected!");
+}
